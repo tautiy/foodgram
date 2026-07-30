@@ -1,9 +1,15 @@
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, viewsets
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .serializers import CustomUserCreateSerializer, CustomUserSerializer
+from .models import Subscription
+from .serializers import (
+    CustomUserCreateSerializer,
+    CustomUserSerializer,
+    SubscriptionSerializer,
+)
 
 
 User = get_user_model()
@@ -31,4 +37,58 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def me(self, request):
         serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def subscribe(self, request, pk=None):
+        """Подписаться на пользователя."""
+        author = get_object_or_404(User, id=pk)
+        serializer = SubscriptionSerializer(
+            data={'user': request.user.id, 'author': author.id},
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user, author=author)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, pk=None):
+        """Отписаться от пользователя."""
+        author = get_object_or_404(User, id=pk)
+        deleted, _ = Subscription.objects.filter(
+            user=request.user,
+            author=author
+        ).delete()
+        if not deleted:
+            return Response(
+                {'detail': 'Вы не подписаны на этого пользователя.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def subscriptions(self, request):
+        """Список подписок текущего пользователя."""
+        subscriptions = Subscription.objects.filter(user=request.user)
+        page = self.paginate_queryset(subscriptions)
+        if page is not None:
+            serializer = SubscriptionSerializer(
+                page,
+                many=True,
+                context={'request': request}
+            )
+            return self.get_paginated_response(serializer.data)
+        serializer = SubscriptionSerializer(
+            subscriptions,
+            many=True,
+            context={'request': request}
+        )
         return Response(serializer.data)

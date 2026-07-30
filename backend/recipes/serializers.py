@@ -1,4 +1,8 @@
+import base64
+import uuid
+
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from .models import (
@@ -10,8 +14,20 @@ from .models import (
     Tag,
 )
 
-
 User = get_user_model()
+
+
+class Base64ImageField(serializers.ImageField):
+    """Поле для приема изображений в формате Base64."""
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(
+                base64.b64decode(imgstr),
+                name=f'{uuid.uuid4()}.{ext}'
+            )
+        return super().to_internal_value(data)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -85,7 +101,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(),
         write_only=True
     )
-    image = serializers.ImageField()
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -162,7 +178,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
-    image = serializers.ImageField(required=False)
+    image = Base64ImageField(required=False)
 
     class Meta:
         model = Recipe
@@ -276,3 +292,30 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return RecipeMinifiedSerializer(instance.recipe).data
+
+
+class UserWithRecipesSerializer(serializers.ModelSerializer):
+    """Сериализатор для пользователей с рецептами (для подписок)."""
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(
+        source='recipes.count',
+        read_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'avatar', 'recipes', 'recipes_count'
+        )
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        limit = request.query_params.get('recipes_limit')
+        recipes = obj.recipes.all()
+        if limit:
+            try:
+                recipes = recipes[:int(limit)]
+            except ValueError:
+                pass
+        return RecipeMinifiedSerializer(recipes, many=True).data

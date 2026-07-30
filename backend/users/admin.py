@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import Subscription, User
 
 
 @admin.register(User)
@@ -31,3 +31,10 @@ class CustomUserAdmin(UserAdmin):
                        'password1', 'password2'),
         }),
     )
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'author')
+    list_filter = ('user', 'author')
+    search_fields = ('user__username', 'author__username')

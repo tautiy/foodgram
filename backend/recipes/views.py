@@ -1,10 +1,20 @@
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from .filters import RecipeFilter
+from .models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag
+)
 from .serializers import (
     FavoriteSerializer,
     IngredientSerializer,
@@ -53,6 +63,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
     queryset = Recipe.objects.all()
     serializer_class = RecipeListSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def get_permissions(self):
         if self.action in ('create',):
@@ -151,3 +163,54 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def download_shopping_cart(self, request):
+        """Скачать список покупок в формате TXT."""
+        user = request.user
+        recipes = user.shopping_cart.all().values_list('recipe', flat=True)
+
+        if not recipes:
+            return Response(
+                {'detail': 'Список покупок пуст.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__in=recipes
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(total_amount=Sum('amount'))
+
+        shopping_list = []
+        for item in ingredients:
+            shopping_list.append(
+                f"{item['ingredient__name']} - "
+                f"{item['total_amount']} "
+                f"{item['ingredient__measurement_unit']}"
+            )
+
+        response = HttpResponse(
+            '\n'.join(shopping_list),
+            content_type='text/plain'
+        )
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.txt"'
+        )
+        return response
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[permissions.AllowAny]
+    )
+    def get_link(self, request, pk=None):
+        """Получить короткую ссылку на рецепт."""
+        recipe = self.get_object()
+        short_link = f"{request.build_absolute_uri('/')}s/{recipe.id}"
+        return Response({'short-link': short_link})
