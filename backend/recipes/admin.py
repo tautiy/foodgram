@@ -26,10 +26,21 @@ class IngredientAdmin(admin.ModelAdmin):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author', 'cooking_time', 'pub_date')
+    list_display = (
+        'id',
+        'name',
+        'author',
+        'favorites_count',
+        'cooking_time',
+        'pub_date'
+    )
     list_filter = ('author', 'tags')
     search_fields = ('name', 'author__username')
     readonly_fields = ('pub_date',)
+
+    @admin.display(description='В избранном')
+    def favorites_count(self, obj):
+        return obj.favorited.count()
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('author')
