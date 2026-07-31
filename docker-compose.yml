@@ -20,6 +20,7 @@ services:
     build: ./backend
     container_name: foodgram_backend
     environment:
+      DB_ENGINE: django.db.backends.postgresql
       DB_NAME: foodgram
       DB_USER: foodgram_user
       DB_PASSWORD: strong_password_123
@@ -27,7 +28,7 @@ services:
       DB_PORT: 5432
       SECRET_KEY: django-insecure-very-secret-key-change-it
       DEBUG: 'False'
-      ALLOWED_HOSTS: localhost,127.0.0.1
+      ALLOWED_HOSTS: 158.160.229.49,localhost,127.0.0.1,phudgrum.abrdns.com
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
@@ -48,6 +49,7 @@ services:
       - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf
       - static_volume:/static
       - media_volume:/media
+      - ./frontend/build:/usr/share/nginx/html   # <-- ДОБАВЛЕНО
     depends_on:
       - backend
 
@@ -55,4 +57,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
-  
+

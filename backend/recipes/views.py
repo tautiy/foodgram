@@ -13,7 +13,7 @@ from .models import (
     Recipe,
     RecipeIngredient,
     ShoppingCart,
-    Tag
+    Tag,
 )
 from .serializers import (
     FavoriteSerializer,

@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
+from users.serializers import CustomUserSerializer
+
 from .models import (
     Favorite,
     Ingredient,
@@ -13,6 +15,7 @@ from .models import (
     ShoppingCart,
     Tag,
 )
+
 
 User = get_user_model()
 
@@ -61,7 +64,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class RecipeListSerializer(serializers.ModelSerializer):
     """Сериализатор для списка рецептов."""
-    author = serializers.ReadOnlyField(source='author.username')
+    author = CustomUserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     ingredients = RecipeIngredientSerializer(
         source='recipe_ingredients',
@@ -111,7 +114,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate_ingredients(self, value):
-        """Проверяем, что ингредиенты переданы корректно."""
         if not value:
             raise serializers.ValidationError(
                 'Добавьте хотя бы один ингредиент'
@@ -121,14 +123,20 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'Каждый ингредиент должен содержать id и amount'
                 )
-            if not isinstance(item['amount'], int) or item['amount'] < 1:
+            try:
+                amount = int(item['amount'])
+            except (ValueError, TypeError):
                 raise serializers.ValidationError(
-                    'Количество должно быть целым числом больше 0'
+                    'Количество должно быть целым числом'
                 )
+            if amount < 1:
+                raise serializers.ValidationError(
+                    'Количество должно быть больше 0'
+                )
+            item['amount'] = amount
         return value
 
     def validate_tags(self, value):
-        """Проверяем, что теги переданы корректно."""
         if not value:
             raise serializers.ValidationError(
                 'Добавьте хотя бы один тег'
@@ -140,26 +148,20 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        """Создаем рецепт с ингредиентами и тегами."""
         ingredients_data = validated_data.pop('ingredients')
         tags_data = validated_data.pop('tags')
         validated_data['author'] = self.context['request'].user
-
         recipe = Recipe.objects.create(**validated_data)
-
         recipe.tags.set(tags_data)
-
         for item in ingredients_data:
             RecipeIngredient.objects.create(
                 recipe=recipe,
                 ingredient_id=item['id'],
                 amount=item['amount']
             )
-
         return recipe
 
     def to_representation(self, instance):
-        """При возврате ответа используем RecipeListSerializer."""
         return RecipeListSerializer(
             instance,
             context=self.context
@@ -188,7 +190,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         )
 
     def validate_ingredients(self, value):
-        """Проверяем, что ингредиенты переданы корректно."""
         if value is not None and not value:
             raise serializers.ValidationError(
                 'Добавьте хотя бы один ингредиент'
@@ -199,14 +200,20 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         'Каждый ингредиент должен содержать id и amount'
                     )
-                if not isinstance(item['amount'], int) or item['amount'] < 1:
+                try:
+                    amount = int(item['amount'])
+                except (ValueError, TypeError):
                     raise serializers.ValidationError(
-                        'Количество должно быть целым числом больше 0'
+                        'Количество должно быть целым числом'
                     )
+                if amount < 1:
+                    raise serializers.ValidationError(
+                        'Количество должно быть больше 0'
+                    )
+                item['amount'] = amount
         return value
 
     def validate_tags(self, value):
-        """Проверяем, что теги переданы корректно."""
         if value is not None and not value:
             raise serializers.ValidationError(
                 'Добавьте хотя бы один тег'
@@ -218,17 +225,13 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        """Обновляем рецепт."""
         ingredients_data = validated_data.pop('ingredients', None)
         tags_data = validated_data.pop('tags', None)
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-
         if tags_data is not None:
             instance.tags.set(tags_data)
-
         if ingredients_data is not None:
             instance.ingredients.clear()
             for item in ingredients_data:
@@ -237,11 +240,9 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
                     ingredient_id=item['id'],
                     amount=item['amount']
                 )
-
         return instance
 
     def to_representation(self, instance):
-        """При возврате ответа используем RecipeListSerializer."""
         return RecipeListSerializer(
             instance,
             context=self.context

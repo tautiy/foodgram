@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .models import Subscription
 from .serializers import (
+    AvatarSerializer,
     CustomUserCreateSerializer,
     CustomUserSerializer,
     SubscriptionSerializer,
@@ -40,24 +41,55 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(
+        detail=False,
+        methods=['put'],
+        url_path='me/avatar',
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def avatar(self, request):
+        user = request.user
+        serializer = AvatarSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @avatar.mapping.delete
+    def delete_avatar(self, request):
+        user = request.user
+        if user.avatar:
+            user.avatar.delete()
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
         detail=True,
         methods=['post'],
         permission_classes=[permissions.IsAuthenticated]
     )
     def subscribe(self, request, pk=None):
-        """Подписаться на пользователя."""
         author = get_object_or_404(User, id=pk)
-        serializer = SubscriptionSerializer(
-            data={'user': request.user.id, 'author': author.id},
+        if request.user == author:
+            return Response(
+                {'detail': 'Нельзя подписаться на себя.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        subscription, created = Subscription.objects.get_or_create(
+            user=request.user,
+            author=author
+        )
+        if not created:
+            return Response(
+                {'detail': 'Вы уже подписаны на этого пользователя.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = CustomUserSerializer(
+            author,
             context={'request': request}
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user, author=author)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def delete_subscribe(self, request, pk=None):
-        """Отписаться от пользователя."""
         author = get_object_or_404(User, id=pk)
         deleted, _ = Subscription.objects.filter(
             user=request.user,
@@ -76,7 +108,6 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def subscriptions(self, request):
-        """Список подписок текущего пользователя."""
         subscriptions = Subscription.objects.filter(user=request.user)
         page = self.paginate_queryset(subscriptions)
         if page is not None:
