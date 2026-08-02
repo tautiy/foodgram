@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
+from api.permissions import IsAuthorOrReadOnly
 from .models import (
     Favorite,
     Ingredient,
@@ -17,9 +18,8 @@ from .models import (
 from .serializers import (
     FavoriteSerializer,
     IngredientSerializer,
-    RecipeCreateSerializer,
     RecipeListSerializer,
-    RecipeUpdateSerializer,
+    RecipeWriteSerializer,
     ShoppingCartSerializer,
     TagSerializer,
 )
@@ -64,6 +64,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeListSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    permission_classes = [IsAuthorOrReadOnly]
 
     def get_permissions(self):
         if self.action in ('create',):
@@ -73,33 +74,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return [permissions.AllowAny()]
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return RecipeCreateSerializer
-        if self.action in ('update', 'partial_update'):
-            return RecipeUpdateSerializer
+        if self.action in ('create', 'update', 'partial_update'):
+            return RecipeWriteSerializer
         return RecipeListSerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.author != request.user:
-            return Response(
-                {'detail': 'Вы не являетесь автором этого рецепта.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        return super().update(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.author != request.user:
-            return Response(
-                {'detail': 'Вы не являетесь автором этого рецепта.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
