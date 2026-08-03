@@ -32,3 +32,21 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
             except (ValueError, TypeError):
                 recipes = recipes.none()
         return RecipeMinifiedSerializer(recipes, many=True).data
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'avatar'
+        )
+        read_only_fields = ('is_subscribed',)
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.subscribers.filter(user=request.user).exists()

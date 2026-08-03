@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
@@ -11,10 +10,10 @@ from .models import (
     Favorite,
     Ingredient,
     Recipe,
-    RecipeIngredient,
     ShoppingCart,
     Tag,
 )
+from api.utils import get_shopping_cart_ingredients
 from .serializers import (
     FavoriteSerializer,
     IngredientSerializer,
@@ -159,12 +158,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__in=recipes
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(total_amount=Sum('amount'))
+        ingredients = get_shopping_cart_ingredients(recipes)
 
         shopping_list = []
         for item in ingredients:

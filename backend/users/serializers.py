@@ -1,10 +1,8 @@
-import base64
-import uuid
-
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
 from rest_framework import serializers
 
+from api.fields import Base64ImageField
+from api.serializers import UserWithRecipesSerializer
 from .models import Subscription
 
 
@@ -40,22 +38,15 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=password
+        )
+        user.first_name = validated_data.get('first_name', '')
+        user.last_name = validated_data.get('last_name', '')
         user.save()
         return user
-
-
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(
-                base64.b64decode(imgstr),
-                name=f'{uuid.uuid4()}.{ext}'
-            )
-        return super().to_internal_value(data)
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -64,11 +55,6 @@ class AvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar',)
-
-    def validate_avatar(self, value):
-        if not value:
-            raise serializers.ValidationError('Изображение не выбрано')
-        return value
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -88,7 +74,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        from recipes.serializers import UserWithRecipesSerializer
         return UserWithRecipesSerializer(
             instance.author,
             context=self.context
