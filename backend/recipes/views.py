@@ -13,13 +13,15 @@ from .models import (
     ShoppingCart,
     Tag,
 )
+from api.serializers import (
+    FavoriteSerializer,
+    ShoppingCartSerializer,
+)
 from api.utils import get_shopping_cart_ingredients
 from .serializers import (
-    FavoriteSerializer,
     IngredientSerializer,
     RecipeListSerializer,
     RecipeWriteSerializer,
-    ShoppingCartSerializer,
     TagSerializer,
 )
 

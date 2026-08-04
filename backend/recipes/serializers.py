@@ -143,11 +143,3 @@ class RecipeWriteSerializer(
 
     def to_representation(self, instance):
         return RecipeListSerializer(instance, context=self.context).data
-
-
-class RecipeMinifiedSerializer(serializers.ModelSerializer):
-    """Мини-сериализатор для рецепта в избранном и корзине."""
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-        read_only_fields = ('id', 'name', 'image', 'cooking_time')

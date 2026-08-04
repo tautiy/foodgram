@@ -1,8 +1,15 @@
 from rest_framework import serializers
 
 from api.utils import User
-from recipes.models import Favorite, ShoppingCart
-from recipes.serializers import RecipeMinifiedSerializer
+from recipes.models import Favorite, Recipe, ShoppingCart
+
+
+class RecipeMinifiedSerializer(serializers.ModelSerializer):
+    """Мини-сериализатор для рецепта в избранном и корзине."""
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+        read_only_fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class BaseFavoriteOrCartSerializer(serializers.ModelSerializer):
