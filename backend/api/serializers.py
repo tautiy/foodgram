@@ -49,7 +49,7 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        limit = request.query_params.get('recipes_limit')
+        limit = request.query_params.get('recipes_limit') if request else None
         recipes = obj.recipes.all()
         if limit:
             try:
