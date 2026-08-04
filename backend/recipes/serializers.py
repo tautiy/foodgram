@@ -1,9 +1,9 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from api.serializers import CustomUserSerializer
-from api.mixins import IngredientValidationMixin
 from api.fields import Base64ImageField
+from api.mixins import IngredientValidationMixin
+from api.serializers import CustomUserSerializer
+
 from .models import (
     Favorite,
     Ingredient,
@@ -12,9 +12,6 @@ from .models import (
     ShoppingCart,
     Tag,
 )
-
-
-User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):

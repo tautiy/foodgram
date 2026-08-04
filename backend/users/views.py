@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from api.utils import User
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -11,9 +11,6 @@ from .serializers import (
     CustomUserSerializer,
     SubscriptionSerializer,
 )
-
-
-User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):

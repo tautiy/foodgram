@@ -1,10 +1,7 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from api.utils import User
 from recipes.serializers import RecipeMinifiedSerializer
-
-
-User = get_user_model()
 
 
 class UserWithRecipesSerializer(serializers.ModelSerializer):

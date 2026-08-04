@@ -1,12 +1,9 @@
-from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from api.fields import Base64ImageField
 from api.serializers import UserWithRecipesSerializer
+from api.utils import User
 from .models import Subscription
-
-
-User = get_user_model()
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
