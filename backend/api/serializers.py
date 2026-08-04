@@ -59,6 +59,12 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
                 recipes = recipes.none()
         return RecipeMinifiedSerializer(recipes, many=True).data
 
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.subscribers.filter(user=request.user).exists()
+
 
 class CustomUserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
