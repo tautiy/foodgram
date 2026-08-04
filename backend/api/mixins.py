@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from recipes.models import Favorite, ShoppingCart
-from recipes.serializers import FavoriteSerializer, ShoppingCartSerializer
+from api.serializers import FavoriteSerializer, ShoppingCartSerializer
 
 
 class IngredientValidationMixin:
