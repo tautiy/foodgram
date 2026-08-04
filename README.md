@@ -17,7 +17,7 @@
 ## Ссылка на проект
 
 Проект доступен по адресу:  
-    [**http://phudgrum.abrdns.com**](http://phudgrum.abrdns.com)
+    [**https://phudgrum.abrdns.com**](https://phudgrum.abrdns.com)
 
 ---
 
