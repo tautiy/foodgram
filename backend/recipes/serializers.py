@@ -3,7 +3,6 @@ from rest_framework import serializers
 from api.fields import Base64ImageField
 from api.mixins import IngredientValidationMixin
 from api.serializers import CustomUserSerializer
-
 from .models import (
     Favorite,
     Ingredient,
@@ -79,6 +78,7 @@ class RecipeWriteSerializer(
     IngredientValidationMixin,
     serializers.ModelSerializer
 ):
+    """Сериализатор для создания и обновления рецептов."""
     ingredients = serializers.ListField(
         child=serializers.DictField(),
         write_only=True,
