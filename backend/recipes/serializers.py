@@ -81,12 +81,10 @@ class RecipeWriteSerializer(
     ingredients = serializers.ListField(
         child=serializers.DictField(),
         write_only=True,
-        required=False
     )
     tags = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
-        required=False
     )
     image = Base64ImageField(required=False)
 
