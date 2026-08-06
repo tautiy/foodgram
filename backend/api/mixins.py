@@ -3,7 +3,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from recipes.models import Favorite, ShoppingCart
-from api.serializers import FavoriteSerializer, ShoppingCartSerializer
 
 
 class IngredientValidationMixin:
@@ -63,7 +62,6 @@ class FavoriteCartMixin:
         """
         recipe = self.get_object()
         user = request.user
-
         if request.method == 'POST':
             serializer = serializer_class(
                 data={'user': user.id, 'recipe': recipe.id},
@@ -88,12 +86,14 @@ class FavoriteCartMixin:
     @action(detail=True, methods=['post'],
             permission_classes=[permissions.IsAuthenticated])
     def favorite(self, request, pk=None):
+        from api.serializers import FavoriteSerializer
         return self._handle_relation(
             request, pk, Favorite, FavoriteSerializer, 'избранном'
         )
 
     @favorite.mapping.delete
     def delete_favorite(self, request, pk=None):
+        from api.serializers import FavoriteSerializer
         return self._handle_relation(
             request, pk, Favorite, FavoriteSerializer, 'избранном'
         )
@@ -101,12 +101,14 @@ class FavoriteCartMixin:
     @action(detail=True, methods=['post'],
             permission_classes=[permissions.IsAuthenticated])
     def shopping_cart(self, request, pk=None):
+        from api.serializers import ShoppingCartSerializer
         return self._handle_relation(
             request, pk, ShoppingCart, ShoppingCartSerializer, 'списке покупок'
         )
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk=None):
+        from api.serializers import ShoppingCartSerializer
         return self._handle_relation(
             request, pk, ShoppingCart, ShoppingCartSerializer, 'списке покупок'
         )
