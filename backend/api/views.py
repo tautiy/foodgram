@@ -6,25 +6,22 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
-from api.mixins import FavoriteCartMixin
 from api.permissions import IsAuthorOrReadOnly
-from recipes.models import (
-    Ingredient,
-    Recipe,
-    Tag,
-)
-from users.models import Subscription
-from api.utils import User, get_shopping_cart_ingredients
 from api.serializers import (
     AvatarSerializer,
     CustomUserCreateSerializer,
     CustomUserSerializer,
+    FavoriteSerializer,
     IngredientSerializer,
     RecipeListSerializer,
     RecipeWriteSerializer,
+    ShoppingCartSerializer,
     SubscriptionSerializer,
     TagSerializer,
 )
+from api.utils import User, get_shopping_cart_ingredients
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from users.models import Subscription
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -53,7 +50,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ('name',)
 
 
-class RecipeViewSet(FavoriteCartMixin, viewsets.ModelViewSet):
+class RecipeViewSet(viewsets.ModelViewSet):
     """
     ViewSet для рецептов.
     GET /api/recipes/ - список рецептов (с фильтрацией)
@@ -82,6 +79,72 @@ class RecipeViewSet(FavoriteCartMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = False
+        return super().update(request, *args, **kwargs)
+
+    def _handle_favorite_or_cart(
+        self,
+        request,
+        model,
+        serializer_class,
+        verbose_name
+    ):
+        recipe = self.get_object()
+        user = request.user
+
+        if request.method == 'POST':
+            serializer = serializer_class(
+                data={'user': user.id, 'recipe': recipe.id},
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=user, recipe=recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        deleted, _ = model.objects.filter(
+            user=user,
+            recipe=recipe
+        ).delete()
+        if not deleted:
+            return Response(
+                {'detail': f'Рецепта нет в {verbose_name}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def favorite(self, request, pk=None):
+        return self._handle_favorite_or_cart(
+            request, Favorite, FavoriteSerializer, 'избранном'
+        )
+
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk=None):
+        return self._handle_favorite_or_cart(
+            request, Favorite, FavoriteSerializer, 'избранном'
+        )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
+    def shopping_cart(self, request, pk=None):
+        return self._handle_favorite_or_cart(
+            request, ShoppingCart, ShoppingCartSerializer, 'списке покупок'
+        )
+
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk=None):
+        return self._handle_favorite_or_cart(
+            request, ShoppingCart, ShoppingCartSerializer, 'списке покупок'
+        )
 
     @action(
         detail=False,
@@ -121,6 +184,7 @@ class RecipeViewSet(FavoriteCartMixin, viewsets.ModelViewSet):
     @action(
         detail=True,
         methods=['get'],
+        url_path='get-link',
         permission_classes=[permissions.AllowAny]
     )
     def get_link(self, request, pk=None):

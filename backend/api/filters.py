@@ -1,8 +1,14 @@
 from django_filters import rest_framework as filters
+
 from recipes.models import Recipe
 
 
 class RecipeFilter(filters.FilterSet):
+    RELATION_MAP = {
+        'is_favorited': 'favorited__user',
+        'is_in_shopping_cart': 'shopping_cart__user',
+    }
+
     tags = filters.AllValuesMultipleFilter(
         field_name='tags__slug',
         lookup_expr='exact'
@@ -30,9 +36,5 @@ class RecipeFilter(filters.FilterSet):
         if not value:
             return queryset
 
-        relation_map = {
-            'is_favorited': 'favorited__user',
-            'is_in_shopping_cart': 'shopping_cart__user',
-        }
-        filter_kwargs = {relation_map.get(name): request.user}
+        filter_kwargs = {self.RELATION_MAP.get(name): request.user}
         return queryset.filter(**filter_kwargs)
