@@ -127,6 +127,7 @@ class RecipeViewSet(FavoriteCartMixin, viewsets.ModelViewSet):
         """Получить короткую ссылку на рецепт."""
         recipe = self.get_object()
         short_link = request.build_absolute_uri(f'/s/{recipe.id}/')
+        short_link = short_link.replace('http://', 'https://')
         return Response({'short-link': short_link})
 
 
