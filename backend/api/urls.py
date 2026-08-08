@@ -6,6 +6,7 @@ from api.views import (
     RecipeViewSet,
     TagViewSet,
     UserViewSet,
+    recipe_short_link_redirect,
 )
 
 app_name = 'api'
@@ -23,4 +24,5 @@ urlpatterns = [
         RecipeViewSet.as_view({'get': 'get_link'}),
         name='recipe-get-link'
     ),
+    path('s/<int:pk>/', recipe_short_link_redirect, name='recipe-short-link'),
 ]
