@@ -54,6 +54,8 @@ services:
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - ./privkey.pem:/etc/nginx/ssl/privkey.pem:ro
     depends_on:
       - backend
       - frontend
