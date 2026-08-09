@@ -77,7 +77,7 @@ TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
+STATIC_URL = '/django-static/'
 STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / 'static')
 
 MEDIA_URL = '/media/'
